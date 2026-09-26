@@ -1,0 +1,54 @@
+rules_version = '2';
+
+// ============================================================================
+// FIREBASE STORAGE RULES
+// ============================================================================
+// Submitted case-deck PDFs live at:
+//   /case-competition-submissions/{competitionId}/{uid}.pdf
+// The uid in the path is the same isolation trick used in firestore.rules:
+// a participant can only ever write to their own path, never a teammate's
+// or a rival's, and there is no listing operation exposed to the client
+// that could enumerate other teams' files.
+// ============================================================================
+
+function isSignedIn() {
+  return request.auth != null;
+}
+
+function isAdmin() {
+  return isSignedIn() &&
+    firestore.exists(/databases/(default)/documents/admins/$(request.auth.uid));
+}
+
+service firebase.storage {
+  match /b/{bucket}/o {
+    match /case-competition-submissions/{competitionId}/{uid}.pdf {
+      allow read: if isAdmin() || (isSignedIn() && request.auth.uid == uid);
+
+      allow write: if isSignedIn() && request.auth.uid == uid &&
+        request.resource.contentType == 'application/pdf' &&
+        // 25MB cap — generous for a slide deck exported to PDF, small
+        // enough that one submission can't exhaust a class's storage quota.
+        request.resource.size < 25 * 1024 * 1024;
+
+      allow delete: if false;
+    }
+
+    // Case Decks library (the public /case-decks page). Same fixed-filename
+    // convention as submissions above — one file per deck id, admin-only
+    // write, public read since this is the site's public content library,
+    // not a private submission.
+    match /case-decks/{deckId}.pdf {
+      allow read: if true;
+
+      allow write: if isAdmin() &&
+        request.resource.contentType == 'application/pdf' &&
+        // 75MB cap — one of the real decks in this library is a compiled
+        // 125-page portfolio of multiple case studies, well over the 25MB
+        // cap that's appropriate for a single competition submission.
+        request.resource.size < 75 * 1024 * 1024;
+
+      allow delete: if isAdmin();
+    }
+  }
+}

@@ -1,0 +1,122 @@
+rules_version = '2';
+
+// ============================================================================
+// FIRESTORE SECURITY RULES
+// ============================================================================
+// Almost every read and write in this app goes through the Firebase client
+// SDK directly from the browser, which makes these rules the enforcement
+// layer for Firestore data — anything checked only in the React UI (hiding
+// a button, redirecting a page) is a convenience for a legitimate user, not
+// a security boundary. Part 15 of the build spec ("enforce permissions at
+// the backend/API/database level, not just by hiding UI") is satisfied
+// here for Firestore data.
+//
+// One exception: uploaded PDF files (case decks and competition
+// submissions) live in Appwrite Storage, not Firebase Storage, because
+// Firebase Storage requires a billing account even on its free tier. A
+// Firestore rule can't gate an Appwrite write, so those specific
+// permission checks ("is this caller an admin", "is this the file's own
+// owner") live in the two Next.js API routes under src/app/api/ instead —
+// see the comments there. Nothing else in this app has a server component.
+//
+// ADMIN MODEL
+// -----------
+// There was no admin-role concept anywhere in this codebase before this
+// change — only Firebase Google Sign-In, with no roles at all. Rather than
+// bolt on a second auth system, an admin is simply a uid with a document at
+// /admins/{uid}. Bootstrap the first admin by hand: sign in once with the
+// Google account that should be an admin, copy its uid from the Firebase
+// console's Authentication tab, then create /admins/{that-uid} with any
+// field (e.g. { email: "you@example.com" }) via the Firestore console or
+// the CLI. Every admin after that can be added the same way, or you can
+// build a tiny "promote to admin" tool later — these rules already allow an
+// existing admin to write new /admins/{uid} docs.
+// ============================================================================
+
+function isSignedIn() {
+  return request.auth != null;
+}
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function isAdmin() {
+      return isSignedIn() &&
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid));
+}
+
+    // ------------------------------------------------------------- admins
+    match /admins/{uid} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+
+    // ---------------------------------------------------------- gameStatus
+    // Public read (the live-status strip renders for signed-out visitors
+    // too), admin-only write.
+    match /gameStatus/{docId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // --------------------------------------------------------- case decks
+    // Public read (anyone visiting the site can browse and open a deck,
+    // signed in or not) — write restricted to admins, so the library is
+    // editable by an admin but view-only for everyone else, participants
+    // included. This is the same admin model as everything else here: a
+    // uid with a document at /admins/{uid}, checked server-side.
+    match /caseDecks/{deckId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // -------------------------------------------------------- competitions
+    match /competitions/{competitionId} {
+      // A DRAFT competition is only visible to the admin who's still
+      // editing it. LIVE and CLOSED are visible to any signed-in user —
+      // CLOSED stays readable so participants can still see the topic and
+      // the final leaderboard after judging wraps up.
+      allow read: if isAdmin() ||
+        (isSignedIn() && resource.data.status in ['LIVE', 'CLOSED']);
+      allow create: if isAdmin();
+      allow update, delete: if isAdmin();
+
+      // ------------------------------------------------------ submissions
+      // One document per participant, keyed by their own uid — that key
+      // choice IS the one-submission-per-team rule and the isolation rule
+      // at the same time: a participant can only ever address their own
+      // document, never a teammate's or a rival's.
+      match /submissions/{uid} {
+        allow read: if isAdmin() || (isSignedIn() && request.auth.uid == uid);
+
+        allow create: if isSignedIn() && request.auth.uid == uid &&
+          get(/databases/$(database)/documents/competitions/$(competitionId)).data.status == 'LIVE' &&
+          request.resource.data.submitterUid == request.auth.uid &&
+          request.resource.data.teamName is string &&
+          request.resource.data.teamName.size() > 0 &&
+          request.resource.data.teamName.size() <= 80 &&
+          request.resource.data.fileUrl is string &&
+          request.resource.data.appwriteFileId is string;
+
+        // A participant may re-submit (replace their file) while the
+        // competition is still live, but can't touch anyone else's entry
+        // and can't edit anything once the window closes.
+        allow update: if isSignedIn() && request.auth.uid == uid &&
+          get(/databases/$(database)/documents/competitions/$(competitionId)).data.status == 'LIVE' &&
+          request.resource.data.submitterUid == request.auth.uid;
+
+        allow delete: if false;
+      }
+
+      // ------------------------------------------------------ evaluations
+      // Scores are admin-written only. Read is open to any signed-in user
+      // so the leaderboard (rank, team, total score) can be computed
+      // client-side without a submission's owner being able to see or
+      // guess at other teams' underlying files — evaluations never expose
+      // the submission content itself, only the judged score.
+      match /evaluations/{uid} {
+        allow read: if isSignedIn();
+        allow write: if isAdmin();
+      }
+    }
+  }
+}
