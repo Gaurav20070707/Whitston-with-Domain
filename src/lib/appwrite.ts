@@ -1,4 +1,5 @@
-import { Client, Storage, InputFile, Permission, Role, ID } from "node-appwrite";
+import { Client, Storage, Permission, Role, ID } from "node-appwrite";
+import { InputFile } from "node-appwrite/file";;
 
 /**
  * Server-only. Holds the Appwrite API key, which grants full write access to
