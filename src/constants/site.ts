@@ -29,7 +29,7 @@ export const stockGameConfig = {
   title: "Whitston Market Simulator",
   shortDescription:
     "Trade in a risk-free, real-time market environment. Build a portfolio, compete on the leaderboard, and learn how markets actually move — without risking a single rupee.",
-  launchUrl: "http://localhost:5173/", // TODO: replace with the real Stock Market Game URL
+  launchUrl: "https://stockgame-new.onrender.com", // TODO: replace with the real Stock Market Game URL
   status: "live" as "live" | "coming-soon" | "beta",
 };
 
