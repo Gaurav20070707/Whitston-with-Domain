@@ -3,6 +3,8 @@ import { verifyIdToken, isAdminUid, getCaseDeckFileId } from "@/lib/firebaseAdmi
 import { uploadPdf, deletePdf, BUCKETS } from "@/lib/appwrite";
 
 export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+export const maxDuration = 60;
 
 /**
  * POST /api/case-decks/upload
@@ -16,6 +18,19 @@ export const runtime = "nodejs";
  * where "is this caller an admin" gets checked before anything is written.
  */
 export async function POST(request: Request) {
+  try {
+    return await handle(request);
+  } catch (err) {
+    console.error("[case-decks/upload] failure:", err);
+    const msg = err instanceof Error ? err.message : "";
+    if (msg.startsWith("Missing ")) {
+      return NextResponse.json({ error: `Server not configured: ${msg}` }, { status: 500 });
+    }
+    return NextResponse.json({ error: `Storage error: ${msg || "the file couldn't be saved."}` }, { status: 502 });
+  }
+}
+
+async function handle(request: Request) {
   const authHeader = request.headers.get("authorization") ?? "";
   const idToken = authHeader.startsWith("Bearer ") ? authHeader.slice(7) : null;
   if (!idToken) return NextResponse.json({ error: "Missing Authorization header." }, { status: 401 });
@@ -40,7 +55,8 @@ export async function POST(request: Request) {
   if (file.type !== "application/pdf") {
     return NextResponse.json({ error: "Only PDF files are accepted." }, { status: 400 });
   }
-  const MAX_BYTES = 75 * 1024 * 1024;
+  // Appwrite Cloud free plan rejects files over 50MB per file.
+const MAX_BYTES = 50 * 1024 * 1024;
   if (file.size > MAX_BYTES) {
     return NextResponse.json({ error: `File is too large. The limit is ${MAX_BYTES / (1024 * 1024)}MB.` }, { status: 400 });
   }

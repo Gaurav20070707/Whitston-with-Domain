@@ -29,17 +29,24 @@ export default function CaseCompetitionDetailPage() {
   const [message, setMessage] = useState<{ kind: "ok" | "err"; text: string } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const load = useCallback(async () => {
-    const c = await getCompetition(competitionId);
-    setCompetition(c);
-    if (!c) return;
-    if (user) {
+    const load = useCallback(async () => {
+    try {
+      const c = await getCompetition(competitionId);
+      setCompetition(c);
+      if (!c) return;
+      // Submissions, evaluations and the leaderboard are readable by signed-in
+      // users only (see firestore.rules), so don't even ask when signed out.
+      if (!user) return;
       const mine = await getMySubmission(competitionId, user.uid);
       setSubmission(mine);
       if (mine) setTeamName(mine.teamName);
       setMyEvaluation(await getEvaluation(competitionId, user.uid));
+      setLeaderboard(await getLeaderboard(competitionId));
+    } catch (err) {
+      // Permission/network errors shouldn't crash the page.
+      console.error("[case-competition] load failed:", err);
+      setCompetition((prev) => (prev === "loading" ? null : prev));
     }
-    setLeaderboard(await getLeaderboard(competitionId));
   }, [competitionId, user]);
 
   useEffect(() => { load(); }, [load]);

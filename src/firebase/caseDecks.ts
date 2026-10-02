@@ -100,6 +100,15 @@ export async function attachFile(deckId: string, file: File): Promise<void> {
     throw new Error("Please upload a PDF file.");
   }
 
+  const MAX_MB = 50; // Appwrite free-plan per-file limit
+  if (file.size > MAX_MB * 1024 * 1024) {
+    throw new Error(
+      `This PDF is ${(file.size / (1024 * 1024)).toFixed(1)}MB, over the ${MAX_MB}MB limit. Compress it (e.g. ilovepdf.com/compress_pdf) and try again.`,
+    );
+  }
+
+
+
   const formData = new FormData();
   formData.append("file", file, file.name);
   formData.append("deckId", deckId);
@@ -109,11 +118,15 @@ export async function attachFile(deckId: string, file: File): Promise<void> {
     headers: await authHeader(),
     body: formData,
   });
+    const raw = await res.text();
+    
+  let body: { error?: string; fileId?: string; fileUrl?: string } = {};
+  try { body = JSON.parse(raw); } catch { /* non-JSON response */ }
   if (!res.ok) {
-    const body = await res.json().catch(() => ({}));
-    throw new Error(body.error || "Upload failed.");
+    throw new Error(body.error || `Upload failed (server error ${res.status}).`);
   }
-  const { fileId, fileUrl } = (await res.json()) as { fileId: string; fileUrl: string };
+  if (!body.fileId || !body.fileUrl) throw new Error("Upload failed: unexpected server response.");
+  const { fileId, fileUrl } = body as { fileId: string; fileUrl: string };
 
   const db = getFirebaseFirestore();
   await updateDoc(doc(db, "caseDecks", deckId), { fileUrl, appwriteFileId: fileId, updatedAt: serverTimestamp() });

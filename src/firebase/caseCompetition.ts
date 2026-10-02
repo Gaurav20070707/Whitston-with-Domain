@@ -187,35 +187,64 @@ export async function submitCaseDeck(
   const token = await getIdToken();
   if (!token) throw new SubmissionError("You need to be signed in to submit.");
 
+  // Some browsers hand over a PDF with an empty MIME type; give it the right
+  // one so it's sent as a proper application/pdf part.
+  const pdf = file.type === "application/pdf" ? file : new File([file], file.name, { type: "application/pdf" });
+
   const formData = new FormData();
-  formData.append("file", file, file.name);
+  formData.append("file", pdf, pdf.name);
   formData.append("competitionId", competitionId);
 
-  const res = await fetch("/api/case-competition/submit", {
-    method: "POST",
-    headers: { Authorization: `Bearer ${token}` },
-    body: formData,
-  });
-  if (!res.ok) {
-    const body = await res.json().catch(() => ({}));
-    throw new SubmissionError(body.error || "Upload failed.");
+  let res: Response;
+  try {
+    res = await fetch("/api/case-competition/submit", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}` },
+      body: formData,
+    });
+  } catch {
+    throw new SubmissionError("Couldn't reach the server. Check your connection and try again.");
   }
-  const { fileId, fileUrl } = (await res.json()) as { fileId: string; fileUrl: string };
 
-  const db = getFirebaseFirestore();
-  const submissionRef = doc(db, ...submissionPath(competitionId, user.uid));
-  await setDoc(submissionRef, {
-    teamName: teamName.trim(),
-    submitterUid: user.uid,
-    submitterEmail: user.email,
-    submitterName: user.displayName,
-    fileUrl,
-    appwriteFileId: fileId,
-    submittedAt: serverTimestamp(),
-  });
+  // The route always answers JSON, but a host-level failure (e.g. a body-size
+  // limit) can come back as plain text/HTML — never assume .json() works.
+  const raw = await res.text();
+  let body: { error?: string; fileId?: string; fileUrl?: string } = {};
+  try { body = JSON.parse(raw); } catch { /* non-JSON response */ }
 
-  const snap = await getDoc(submissionRef);
-  return fromSubmissionDoc(competitionId, user.uid, snap.data()!);
+  if (!res.ok) {
+    if (res.status === 413) {
+      throw new SubmissionError("That PDF is too large for the server to accept. Compress it and try again.");
+    }
+    throw new SubmissionError(body.error || `Upload failed (server error ${res.status}).`);
+  }
+  if (!body.fileId || !body.fileUrl) throw new SubmissionError("Upload failed: unexpected server response.");
+  const { fileId, fileUrl } = body as { fileId: string; fileUrl: string };
+
+  try {
+    const db = getFirebaseFirestore();
+    const submissionRef = doc(db, ...submissionPath(competitionId, user.uid));
+    await setDoc(submissionRef, {
+      teamName: teamName.trim(),
+      submitterUid: user.uid,
+      submitterEmail: user.email,
+      submitterName: user.displayName,
+      fileUrl,
+      appwriteFileId: fileId,
+      submittedAt: serverTimestamp(),
+    });
+
+    const snap = await getDoc(submissionRef);
+    return fromSubmissionDoc(competitionId, user.uid, snap.data()!);
+  } catch (err) {
+    const code = (err as { code?: string }).code;
+    if (code === "permission-denied") {
+      throw new SubmissionError(
+        "Your file uploaded but the submission couldn't be recorded (permission denied). The competition may have just closed, or the Firestore rules haven't been deployed.",
+      );
+    }
+    throw new SubmissionError("Your file uploaded but saving the submission failed. Please try again.");
+  }
 }
 
 /** Replaces a prior submission's file (re-submission while still LIVE). The
