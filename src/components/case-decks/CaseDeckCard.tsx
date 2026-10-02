@@ -1,4 +1,4 @@
-import Image from "next/image";
+import { DeckThumbnail } from "./DeckThumbnail";
 import { Calendar, Clock, ArrowUpRight, Download, Users, FileClock } from "lucide-react";
 import type { CaseDeck } from "@/types";
 import { formatDate } from "@/lib/utils";
@@ -10,13 +10,7 @@ export function CaseDeckCard({ deck }: { deck: CaseDeck }) {
   return (
     <article className="brutal-edge group flex flex-col overflow-hidden rounded-xl2 border-2 border-ink-900 bg-parchment-100 shadow-[4px_4px_0_0_theme(colors.ink.900)] dark:border-parchment-100 dark:bg-ink-700 dark:shadow-[4px_4px_0_0_theme(colors.parchment.100)]">
       <div className="relative aspect-[16/10] w-full overflow-hidden border-b-2 border-ink-900 bg-ink-900/5 dark:border-parchment-100 dark:bg-ink-950">
-        <Image
-          src={deck.thumbnailUrl}
-          alt=""
-          fill
-          sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-          className="object-cover transition-transform duration-500 group-hover:scale-105"
-        />
+        <DeckThumbnail src={deck.thumbnailUrl} />
         <span className="absolute left-3 top-3 rounded-md border border-white/10 bg-ink-900/90 px-3 py-1 font-mono text-[11px] font-semibold uppercase tracking-[0.12em] text-parchment-100 backdrop-blur-sm">
           {deck.category}
         </span>
