@@ -40,10 +40,10 @@ export const stockGameConfig = {
  */
 export const socialLinks = {
   instagram: "#", // TODO: replace with real Instagram URL
-  linkedin: "#", // TODO: replace with real LinkedIn URL
-  email: "mailto@gmail.com", // TODO: replace with real email address
+  linkedin: "https://www.linkedin.com/company/whitstonn/posts/", // TODO: replace with real LinkedIn URL
+  email: "whitston@whitston.in", // TODO: replace with real email address
   whatsapp: "#", // TODO: replace with real WhatsApp community invite link
-  phone: "+910000000000", // TODO: replace with real phone number (E.164 format, no spaces)
+  phone: "+919717726979", // TODO: replace with real phone number (E.164 format, no spaces)
 };
 
 /** Derived, ready-to-use hrefs so components never have to format these. */

@@ -14,10 +14,7 @@ export function Footer() {
         <div className="grid gap-12 md:grid-cols-[1.4fr_1fr_1fr_1.2fr]">
           <div>
             <Link href="/" className="flex items-center gap-2.5" aria-label={`${siteConfig.name} home`}>
-              <Logo />
-              <span className="font-display text-xl font-black uppercase text-ink-900 dark:text-parchment-100">
-                {siteConfig.name}
-              </span>
+              <Logo withTagline className="h-14" />
             </Link>
             <p className="mt-4 max-w-xs text-sm leading-relaxed text-ink-600 dark:text-ink-200">
               {siteConfig.description}

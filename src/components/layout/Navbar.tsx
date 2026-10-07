@@ -39,10 +39,7 @@ export function Navbar() {
     >
       <Container className="flex h-20 items-center justify-between py-3">
         <Link href="/" className="flex items-center gap-2.5" aria-label={`${siteConfig.name} home`}>
-          <Logo className="h-9 w-9" />
-          <span className="font-display text-xl font-black uppercase tracking-tight text-ink-900 dark:text-parchment-100">
-            {siteConfig.name}
-          </span>
+          <Logo className="h-7" />
         </Link>
 
         <nav className="hidden items-center gap-7 md:flex" aria-label="Primary">
