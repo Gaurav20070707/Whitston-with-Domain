@@ -50,11 +50,13 @@ export const metadata: Metadata = {
     siteName: siteConfig.name,
     locale: siteConfig.locale,
     type: "website",
+    images: [{ url: "/images/whitston-logo.jpg", width: 716, height: 705, alt: "Whitston — build judgment early" }],
   },
   twitter: {
     card: "summary_large_image",
     title: siteConfig.name,
     description: siteConfig.description,
+    images: ["/images/whitston-logo.jpg"],
   },
   icons: {
     icon: "/favicon.ico",
