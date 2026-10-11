@@ -1,7 +1,7 @@
 import { Hero } from "@/components/home/Hero";
 import { About } from "@/components/home/About";
+import { ProgramDetails } from "@/components/home/ProgramDetails";
 import { FeatureCards } from "@/components/home/FeatureCards";
-import { StockGameTeaser } from "@/components/home/StockGameTeaser";
 import { Contact } from "@/components/home/Contact";
 
 export default function HomePage() {
@@ -9,8 +9,8 @@ export default function HomePage() {
     <>
       <Hero />
       <About />
+      <ProgramDetails />
       <FeatureCards />
-      <StockGameTeaser />
       <Contact />
     </>
   );

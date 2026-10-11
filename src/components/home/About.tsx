@@ -5,7 +5,7 @@ import { Section, Container } from "@/components/ui/Container";
 import { SectionHeading } from "@/components/ui/SectionHeading";
 
 const stats = [
-  { value: "2", label: "Core programs — Simulator & Case Decks" },
+  { value: "3", label: "Core programs — Simulator, Case Decks & Case Competitions" },
   { value: "100%", label: "Risk-free practice environment" },
   { value: "∞", label: "Room to grow — built to expand" },
 ];
@@ -18,7 +18,7 @@ export function About() {
           <SectionHeading
             eyebrow="About Whitston"
             title="Financial fluency shouldn't wait until adulthood."
-            description="Whitston exists because the best time to understand money, markets, and decision-making is before the stakes are real. We build tools that let students practice first — trading in a simulated market, working through real-world case studies — so judgment is earned before it's ever tested."
+            description="Whitston exists because the best time to understand money, markets, and decision-making is before the stakes are real. We build tools that let students practice first — trading in a simulated market, working through real-world case studies, competing on business challenges — so judgment is earned before it's ever tested."
           />
 
           <motion.div
