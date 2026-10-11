@@ -39,7 +39,7 @@ export const stockGameConfig = {
  * site (footer, contact section, nav) reads from this object.
  */
 export const socialLinks = {
-  instagram: "#", // TODO: replace with real Instagram URL
+  instagram: "https://www.instagram.com/whitston.co/", // TODO: replace with real Instagram URL
   linkedin: "https://www.linkedin.com/company/whitstonn/posts/", // TODO: replace with real LinkedIn URL
   email: "contact@whitston.in", // TODO: replace with real email address
   whatsapp: "#", // TODO: replace with real WhatsApp community invite link
